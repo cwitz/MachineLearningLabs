@@ -1,0 +1,16 @@
+Names:
+   Thomas Bergmann - tbbergma@calpoly.edu
+   Connor Witzeman - cwitzema@calpoly.edu
+
+How to run code:
+   InduceC45 usage:
+      python3 InduceC45.py <TrainingSetFile.csv> [<restrictionsFile>]
+
+   classify usage:
+      python3 classify.py <csvFile> <jsonFile>
+
+   validation usage:
+      python3 validation.py <TrainingSetFile.csv> <n-folds> [<restrictionsFile>]
+
+Notes:
+
