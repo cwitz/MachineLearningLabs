@@ -1,6 +1,7 @@
 import pandas as pd
 import numpy as np
 import math, sys
+import random as rd
 
 
 class Node:
@@ -39,20 +40,10 @@ class Attribute:
       return self.attrName == other.attrName
 
 
-#def c45(D, A, threshold, classAttr, Ddataframe):
 def c45(D, A, threshold, classAttr):
    r = Node()
 
    # Check purity
-   """
-   pure = True
-   classAttrIndex = classAttr.index
-   curClass = D[0][classAttrIndex]
-   for datapoint in D:
-      if datapoint[classAttrIndex] != curClass:
-         pure = False
-         break
-   """
    pure = len(set(D.loc[:, classAttr.attrName].tolist())) == 1
    if pure:
       curClass = D.loc[:, classAttr.attrName].iloc[0]
@@ -66,8 +57,6 @@ def c45(D, A, threshold, classAttr):
    # Select splitting attribute
    else:
       attrNames = [att.attrName for att in A]
-      #Ag = selectSplittingAttribute(attrNames, Ddataframe, classAttr.domain,
-      #                              classAttr.attrName, threshold)
       Ag = selectSplittingAttribute(attrNames, D, classAttr.domain,
                                     classAttr.attrName, threshold)
       if Ag is None:  # No attributes remaining to split on
@@ -79,12 +68,14 @@ def c45(D, A, threshold, classAttr):
             if attr.attrName == Ag:
                Ag = attr
                break
+         if Ag is None:
+            print(f"Error building tree: split attribute {ag} still" +
+                  " none after looking through attributes:")
+            for attr in A:
+               print(attr.attrName)
+               print(attr.domain)
+            exit()
          for v in Ag.domain:
-            #Dv = []
-            #for t in D:
-            #   if t[Ag.index] == v:
-            #      Dv.append(t)
-            #Ddataframev = Ddataframe[Ddataframe[Ag.attrName] == v]
             Dv = D[D[Ag.attrName] == v]
             if len(Dv) > 0:
                remainingAttrs = A.copy()
@@ -92,17 +83,13 @@ def c45(D, A, threshold, classAttr):
                   if remainingAttrs[i] == Ag:
                      del remainingAttrs[i]
                      break
-               #Tv = c45(Dv, remainingAttrs, threshold, classAttr,
-               #         Ddataframev)
                Tv = c45(Dv, remainingAttrs, threshold, classAttr)
                r.addChild(Tv, v)
-
+         
    return r
 
 
 def find_most_frequent_label(data, classAttr):
-   #classIndex = classAttr.index
-   #classes = [dp[classIndex] for dp in data]
    classes = data.loc[:, classAttr.attrName].tolist()
    return max(set(classes), key = classes.count)
 
@@ -173,41 +160,17 @@ def entropy(D, A, C, aName,  result):
   return sum(pieces)
 
 
-def treeToJson(tree):
-  jStr = ""
-  if(len(tree.children) != 0):
-    jStr += "\"node\": {\n  \"var\": "
-    jStr += '"' +  tree.label + "\","
-    jStr += "\n\"edges\": [ \n"
-    for i in range(len(tree.edgelabels)):
-      jStr += "{\"value\":"
-      jStr += '"' + tree.edgelabels[i] + '"' + ","
-      jStr += treeToJson(tree.children[i])
-      jStr += "}"
-      if(i < len(tree.edgelabels) - 1):
-        jStr += ","
-    jStr += "]"
-    jStr += "}"
-  else:
-    jStr += "\"leaf\":{\"decision\": "
-    jStr += '"' + tree.label + "\""
-    jStr += "}"
-  return jStr
-
-
-def traverseTree(tree, row):
+def traverseTree(tree, row, classDomain):
   #if its a leaf
   if (len(tree.children) == 0):
     return tree.label
   for i in range(len(tree.children)):
     if(tree.edgelabels[i] == row.loc[tree.label]):
-      return traverseTree(tree.children[i], row)
-  print("ERROR TRAVERSE TREE")
-  print(f"Row:\n{row}")
-  print(f"Tree label: {tree.label}")
-  print(f"Edges: {tree.edgelabels}\nChildren: {tree.children}")
-  exit()
-
+      return traverseTree(tree.children[i], row, classDomain)
+  
+  # No edge for the attribute. Choose random guess.
+  return rd.choice(classDomain)
+ 
 
 #################################################
 # Main program
@@ -320,7 +283,7 @@ def main():
         for fold in trainSets:
           dTree = c45(fold, attributelist, threshold, classAttr)
           row = testSet.iloc[0]
-          guess = traverseTree(dTree, row)
+          guess = traverseTree(dTree, row, classDom)
 
           x = classDom.index(guess)
           y = classDom.index(row[classAttrName])
@@ -343,6 +306,7 @@ def main():
       print(f"Average accuracy: {sum(avgAcc) / len(avgAcc)}")
       print(f"Overall error rate: {wrong / (len(avgErr)*(len(folds)-1))}")
       print(f"Average error rate: {sum(avgErr) / len(avgErr)}")
+   
    elif nFolds == 0 or nFolds == 1: # 1-fold validation
       dTree = c45(Ddataframe, attributelist, threshold, classAttr)
       
@@ -351,7 +315,7 @@ def main():
       right = wrong = 0.0
       for d in range(len(Ddataframe)):
          row = Ddataframe.iloc[d]
-         guess = traverseTree(dTree, row)
+         guess = traverseTree(dTree, row, classDom)
 
          x = classDom.index(guess)
          y = classDom.index(row[classAttrName])
@@ -387,7 +351,7 @@ def main():
 
           for test in range(len(testSet)):
              row = testSet.iloc[test]
-             guess = traverseTree(dTree, row)
+             guess = traverseTree(dTree, row, classDom)
           
              x = classDom.index(guess)
              y = classDom.index(row[classAttrName])
