@@ -293,6 +293,8 @@ def traverseTree(tree, row, classDomain):
    if tree.isCont:
       # Assuming left child is <= and right child is >
       parsedEdge = tree.edgelabels[0].split(" ")
+      if row.loc[tree.label] == "?":
+         return traverseTree(tree.children[0], row, classDomain)
       if float(row.loc[tree.label]) <= float(parsedEdge[1]):
          return traverseTree(tree.children[0], row, classDomain)
       else: # greater than split variable
@@ -429,6 +431,4 @@ def main(args):
       #print(f"Average accuracy: {sum(avgAcc) / len(avgAcc)}")
       #print(f"Overall error rate: {wrong / (right + wrong)}")
       #print(f"Average error rate: {sum(avgErr) / len(avgErr)}")
-
-
 main()
