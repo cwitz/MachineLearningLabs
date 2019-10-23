@@ -87,13 +87,13 @@ def c45(D, A, threshold, classAttr):
          if Agatt.isCont:
             r.isCont = True
             bestBinSplit = float(Ag[1])
-            
+
             Dless = D[pd.to_numeric(D[Agatt.attrName]) <= bestBinSplit]
             Dgreater = D[pd.to_numeric(D[Agatt.attrName]) > bestBinSplit]
-      
+
             if len(Dless) < 0 or len(Dgreater) < 0:
                print("ERROR: Bad numeric attribute split")
-               
+
             trLess = c45(Dless, A, threshold, classAttr)
             r.addChild(trLess, f"<= {bestBinSplit}")
             trGreater = c45(Dgreater, A, threshold, classAttr)
@@ -107,10 +107,10 @@ def c45(D, A, threshold, classAttr):
                      if remainingAttrs[i] == Agatt:
                         del remainingAttrs[i]
                         break
-               
+
                   Tv = c45(Dv, remainingAttrs, threshold, classAttr)
                   r.addChild(Tv, v)
-         
+
    return r
 
 
@@ -119,7 +119,7 @@ def find_most_frequent_label(data, classAttr):
    return max(set(classes), key = classes.count)
 
 
-def selectSplittingAttribute(A, D, C, result, threshold, isCont):  
+def selectSplittingAttribute(A, D, C, result, threshold, isCont):
   p = []
   gain = []
   gain.append(0)
@@ -163,7 +163,7 @@ def findBestSplit(a, D, C, i, result):
         else:
           count[key] = str(1)
         break
-  
+
   splitVals = []
   for m in counts:
     for x in m:
@@ -187,6 +187,8 @@ def entropyCon(D, a, x, counts, C, result):
   for i in range(len(counts)):
     for c in counts[i]:
       count = counts[i]
+      if(c == "?" or x == "?"):
+        return 1000000
       if float(c) <= float(x):
         curr = results[0]
         curr[i] += int(count[c])
@@ -299,14 +301,14 @@ def traverseTree(tree, row, classDomain):
       for i in range(len(tree.children)):
          if(tree.edgelabels[i] == row.loc[tree.label]):
             return traverseTree(tree.children[i], row, classDomain)
-  
+
    # No edge for the attribute. Choose random guess.
    return rd.choice(classDomain)
- 
+
 
 #################################################
 # Main program
-def main():
+def main(args):
    args = sys.argv
    threshold = .1
 
@@ -314,7 +316,7 @@ def main():
    if len(args) != 5:
       print("Usage: python3 randomForest.py <datasetFile.csv> " +
             "<NumAttributes> <NumDataPoints> <NumTrees>")
-      exit() 
+      exit()
 
    ### Parse input csv
    datasetcsv = datasetfile = 0
@@ -327,7 +329,7 @@ def main():
    Ddataframe = datasetcsv.loc[2:]
    dataset=[line.strip().split(',') for line in datasetfile if len(line)>0]
    #for drow in Ddatafram:
-   #   for 
+   #   for
 
    ### Parse numeric input parameters
    numAttributes = numDatapoints = numTrees = 0
@@ -335,7 +337,7 @@ def main():
       numAttributes = int(args[2])
       numDatapoints = int(args[3])
       numTrees = int(args[4])
-      
+
       if numAttributes < -1 or numDatapoints < -1 or numTrees < -1:
          raise ValueError
    except:
@@ -354,7 +356,7 @@ def main():
       attrType = attrTypes[colnum]
       if attrType == -1: # if -1, not to be counted in classification
          pass
-      
+
       else:
          attrName = attrNames[colnum]
          if attrName == classAttrName: # Class attribute
@@ -365,20 +367,20 @@ def main():
             isCont = attrType == 0
             if not isCont:
                attrDomain = set(Ddataframe[attrName].tolist())
-            attributelist.append(Attribute(attrName, list(attrDomain), 
+            attributelist.append(Attribute(attrName, list(attrDomain),
                                            colnum, isCont))
 
    classAttrIndex = attrNames.index(classAttrName)
    classAttr = Attribute(classAttrName, list(classDomain), classAttrIndex)
 
    attrNames = [att.attrName for att in attributelist]
-   
+
    numDatapoints = min(numDatapoints, len(Ddataframe))
    numAttributes = min(numAttributes, len(attrNames))
-   
+
    ### Cross validation
    classDom = list(classDomain)
-  
+
    if True: # n-fold validation
       Dshuffled = Ddataframe.sample(frac = 1)
       folds = np.array_split(Dshuffled, 10)
@@ -386,7 +388,7 @@ def main():
       avgAcc = [0.0] * len(folds)
       avgErr = [0.0] * len(folds)
       confMatrix=[[0] * len(classDomain) for n in range(len(classDomain))]
-      
+
       for f in range(len(folds)):
         testSet = folds[f]
         trainSets = folds[:]
@@ -395,17 +397,17 @@ def main():
 
         nDps = min(numDatapoints, len(trainSet))
         #print("Creating forest...")
-        forest = createForest(attributelist, numTrees, numAttributes, 
+        forest = createForest(attributelist, numTrees, numAttributes,
                               nDps, threshold, classAttr, trainSet)
         #print("Finished forest!")
         curRight = curWrong = 0.0
 
         for test in range(len(testSet)):
            row = testSet.iloc[test]
-           
+
            for tr in forest:
              guess = traverseTree(tr, row, classDom)
-          
+
              x = classDom.index(guess)
              y = classDom.index(row[classAttrName])
              confMatrix[x][y] += 1
@@ -415,18 +417,18 @@ def main():
              else:
                 wrong += 1
                 curWrong += 1
-        
+
         #avgAcc[f] = curRight / (len(trainSets) * len(testSet))
         #avgErr[f] = curWrong / (len(trainSets) * len(testSet))
 
       print(f"Confusion matrix:\n{classDom}")
       for i in range(len(confMatrix)):
          print(f"{classDom[i]}: {confMatrix[i]}")
-      
+
       print(f"Overall accuracy: {right / (right + wrong)}")
       #print(f"Average accuracy: {sum(avgAcc) / len(avgAcc)}")
       #print(f"Overall error rate: {wrong / (right + wrong)}")
       #print(f"Average error rate: {sum(avgErr) / len(avgErr)}")
 
-     
+
 main()
