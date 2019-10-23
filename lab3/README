@@ -12,5 +12,7 @@ How to run code:
    validation usage:
       python3 validation.py <TrainingSetFile.csv> <n-folds> [<restrictionsFile>]
 
-Notes:
+   KNN usage:
+      python3 knn.py <csvFile> <k>
 
+Notes:
